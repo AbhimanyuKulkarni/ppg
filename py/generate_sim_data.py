@@ -25,20 +25,13 @@
     ...
 """
 
+from experiment_setup import *
 import numpy as np
-
-output_datafile_name = 'samples.csv'
-
-T = 600             # seconds
-f0 = 4              # Hz, the rate at which this signal is being generated
-T0 = 1.0 / f0       # seconds
-
-N0 = int(T // T0)   # how many samples
 
 deltas = np.ones((N0,)) * T0    # uniform inter-sample interval, can be changed
 t0 = np.cumsum(deltas)          # actual samples
 
-amp_A = 1.0                                         # AM variation amplitude
+amp_A = 0.1                                         # AM variation amplitude
 A = 1.0 + (np.random.random((N0,)) - 0.5) * amp_A   # actual AM
 
 # A can be made more smooth...
@@ -61,5 +54,5 @@ x0 = A0 * (np.cos(2 * np.pi * t0 - b0) + u0)
 # Collect sampling instants and values together
 out_data = np.hstack((t0.reshape(-1, 1), x0.reshape(-1, 1)))
 
-# Dump
-np.savetxt(output_datafile_name, out_data, delimiter=',')
+# Dump original samples.
+np.savetxt(original_samples_filename, out_data, delimiter=',')
