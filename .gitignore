@@ -5,6 +5,11 @@ __pycache__/
 
 # C extensions
 *.so
+*.o
+
+# Can always reconstruct locally if code works
+data/sim/reconstructed_*
+data/physionet/reconstructed_*
 
 # Binaries
 a.out

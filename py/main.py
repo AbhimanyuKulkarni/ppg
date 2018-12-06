@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-from experiment_setup import *
+import sys
+EXPT_NAME = sys.argv[1]
+
+if EXPT_NAME == 'physionet':
+    from physionet_experiment_setup import *
+elif EXPT_NAME == 'sim':
+    from sim_experiment_setup import *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -117,6 +123,6 @@ plt.legend()
 plt.show()
 
 print('Corrcoef: ', np.corrcoef(X0, Xr))
-
+print('Saving to {}...'.format(reconstruction_filename))
 out_data = np.hstack((t0.reshape(-1, 1), Xr.reshape(-1, 1)))
-np.savetxt(reconstruction_filename, out_data, delimiter=',')
+np.savetxt(reconstruction_filename, out_data, fmt='%f', delimiter=',')

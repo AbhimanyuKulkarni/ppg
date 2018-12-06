@@ -18,6 +18,7 @@
 #include "setup.h"
 #include <time.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 
 void get_random_sample_flags(size_t N, size_t m, bool *flags) {
@@ -63,7 +64,7 @@ void generate_sim_data(PPG_Params params, double *samples) {
 		A *= smoothing_factor;
 		A += (1 - smoothing_factor) * 
 					(1.0 + (((double) rand()) / RAND_MAX - 0.5) * amp_A);
-		u0 = 2 * (((double) rand()) / RAND_MAX);
+		u0 = sigma0 * 2 * (((double) rand()) / RAND_MAX);
 		samples[i] = A * (cos(2 * M_PI * t - b0) + u0);
 		t += params.T0;
 	}

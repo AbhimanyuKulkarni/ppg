@@ -6,16 +6,10 @@
 
 EXPT_NAME = 'sim'
 
-if EXPT_NAME == 'physionet':
-    T = 60                      # s, total length of signal
-    f0 = 256                    # Hz, original sampling rate
-    T_window = 60               # s
-    CF = 32                     # compression ratio
-elif EXPT_NAME == 'sim':
-    T = 600
-    f0 = 4
-    T_window = 60
-    CF = 12
+T = 600                     # s, total length of signal
+f0 = 4                      # Hz, original sampling rate
+T_window = 60               # s
+CF = 12                     # compression ratio
     
 T0 = 1.0 / f0               # s
 # samples per window, making sure it's a multiple of 4

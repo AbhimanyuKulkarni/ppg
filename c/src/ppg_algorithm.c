@@ -252,13 +252,13 @@ void cd_lasso(double *y, double *A, size_t M, size_t N,
 
 // PPG algorithm helper functions
 static void setup_psiT(double *psiT, size_t N) {
-	double factor = 2.0 / sqrt(2 * N);
+	double factor = 1.0 / sqrt(N);
 	for (size_t n = 0; n < N; ++n) {
 		psiT[n * N] = factor;
 	}
 
 	factor *= sqrt(2);
-	for (size_t n = 0; n < N; ++n) {
+	for (size_t n = 1; n < N; ++n) {
 		for (size_t k = 0; k < N; ++k) {
 			psiT[n * N + k] = factor * cos((M_PI / N) * (n + 0.5) * k);
 		}
