@@ -34,6 +34,12 @@ original_samples_filename = 'data/{}/samples.csv'.format(EXPT_NAME)
 phi_flags_filename \
         = 'data/{}/phi_flags_{}_{}.csv'.format(EXPT_NAME,
                                                 N_window, M)
+psiT_mat_filename \
+        = 'data/{}/psiT_{}_{}.csv'.format(EXPT_NAME, N_window, M)
+A_mat_filename \
+        = 'data/{}/A_{}_{}.csv'.format(EXPT_NAME, N_window, M)
+A_flip_mat_filename \
+        = 'data/{}/A_flip_{}_{}.csv'.format(EXPT_NAME, N_window, M)
 subsamples_filename \
         = 'data/{}/subsamples_{}_{}.csv'.format(EXPT_NAME,
                                                 N_window, M)
