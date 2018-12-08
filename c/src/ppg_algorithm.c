@@ -23,7 +23,7 @@ static void vec_sub_update(double *vec, double *b, size_t N) {
 //
 // DCT stuff
 // O(N^2) algorithms: just naive loops
-void dct_1D(double *X, size_t N, double *X_DCT) {
+static void dct_1D(double *X, size_t N, double *X_DCT) {
 	memset(X_DCT, 0, sizeof(double) * N);
 	const double factor_1 = 2.0 / sqrt(N);
 	const double factor_0 = factor_1 / sqrt(2);
@@ -38,7 +38,7 @@ void dct_1D(double *X, size_t N, double *X_DCT) {
 	}
 }
 
-void idct_1D(double *X_DCT, size_t N, double *X) {
+static void idct_1D(double *X_DCT, size_t N, double *X) {
 	memset(X, 0, sizeof(double) * N);
 	const double factor_1 = 2.0 / sqrt(N);
 	const double factor_0 = factor_1 / sqrt(2);
@@ -53,7 +53,7 @@ void idct_1D(double *X_DCT, size_t N, double *X) {
 	}
 }
 
-void random_sample_idct_1D(double *X_DCT, size_t N,
+static void random_sample_idct_1D(double *X_DCT, size_t N,
 													bool *phi_flags, size_t M, double *Y) {
 	memset(Y, 0, sizeof(double) * M);
 	const double factor_1 = 2.0 / sqrt(N);
@@ -89,7 +89,7 @@ static void calc_Anorm2_randsample_idct_1D(bool *phi_flags, size_t N,
 	}
 }
 
-void cd_lasso_randsample_idct_1D(double *y, size_t M,
+static void cd_lasso_randsample_idct_1D(double *y, size_t M,
 																bool *phi_flags, size_t N,
 																double lambda, double tol,
 																double *s_hat) {
@@ -169,7 +169,8 @@ void cd_lasso_randsample_idct_1D(double *y, size_t M,
 ////////////////////////////////////////////////////////////////////////
 // THIS IS THE REAL SHIT. THE CODE WHICH IS ACTUALLY RUNNING.
 // Matrix math
-void dot(double *A, double *B, size_t M, size_t N, size_t P, double *C) {
+static void dot(double *A, double *B, size_t M, size_t N, size_t P,
+								double *C) {
 	// C = AB, everything is row-major
 	for (int i = 0; i < M; ++i) {
 		for (int j = 0; j < P; ++j) {
@@ -182,7 +183,7 @@ void dot(double *A, double *B, size_t M, size_t N, size_t P, double *C) {
 }
 
 // LASSO solvers
-void cd_lasso(double *y, double *A, size_t M, size_t N,
+static void cd_lasso(double *y, double *A, size_t M, size_t N,
 				double lambda, double tol, double *x_hat) {
 	// y M-dim, A is MxN, x_hat is Nx1
 	double *A_norm2 = malloc(sizeof(double) * N);
