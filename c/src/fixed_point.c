@@ -9,7 +9,7 @@ FxP64 double_to_FxP64(double d) {
 	uint64_t double_exp_part = (u.uintval & DOUBLE_EXP_MASK) >> 52;
 	uint64_t double_sign_part = (u.uintval & DOUBLE_SIGN_MASK) >> 63;
 	
-	uint64_t fraction;
+	int64_t fraction;
 	if (double_exp_part == 0) {
 		// Subnormals.
 		// Such values should just become zero though...
@@ -49,7 +49,8 @@ FxP64 double_to_FxP64(double d) {
 			return fraction;
 		} else {
 			// perform 2s complement
-			return (~fraction) + 1;
+			// The computer does this for us...
+			return -fraction;
 		}
 	}
 }
@@ -64,40 +65,61 @@ double FxP64_to_double(FxP64 fxp) {
 	uint64_t repr = fxp;
 	if (sign_part) {
 		// re-do 2s complement to get magnitude.
-		repr = (uint64_t) (~repr + 1);
+		// But the computer can do this for us automatically...
+		repr = -repr;
 	}
 
-	// Find MSB
-	uint8_t msb_loc = (uint8_t) floor(log2(repr));
-	// Exponent is related to MSB:
-	// If msb = 0, exponent is -FxP64_FRAC_LEN
-	// if msb = FxP64_FRAC_LEN, exponent is 0
-	// if msb = 62, exponent is FxP64_INT_LEN-2
-	//							already max was FxP64_INT_LEN-1
-	//							if unsigned, but with the last bit being sign
-	//							we should have max exponent being FxP64_INT_LEN-2
-	//							e.g. for 16-48
-	//								msb 0 => 2^-48 is the max term
-	//										  => exponent is -48 then
-	//								msb 48 => number is already 1.<fraction>
-	//								so if msb 62
-	//									we should have max term 2^14
-	uint64_t exp = 1023 - FxP64_FRAC_LEN + msb_loc;
-	exp <<= 52;
-	u.uintval |= exp;
+	if (repr != 0) {
+		// Find MSB
+		uint8_t msb_loc = (uint8_t) floor(log2(repr));
+		// Exponent is related to MSB:
+		// If msb = 0, exponent is -FxP64_FRAC_LEN
+		// if msb = FxP64_FRAC_LEN, exponent is 0
+		// if msb = 62, exponent is FxP64_INT_LEN-2
+		//							already max was FxP64_INT_LEN-1
+		//							if unsigned, but with the last bit being sign
+		//							we should have max exponent being FxP64_INT_LEN-2
+		//							e.g. for 16-48
+		//								msb 0 => 2^-48 is the max term
+		//										  => exponent is -48 then
+		//								msb 48 => number is already 1.<fraction>
+		//								so if msb 62
+		//									we should have max term 2^14
+		uint64_t exp = 1023 - FxP64_FRAC_LEN + msb_loc;
+		exp <<= 52;
+		u.uintval |= exp;
 
-	// Now for the magnitude
-	// Number is 1.<something> from MSB onwards.
-	// Which is what we want...
-	// We need to get the MSB to location 52, and then take locations 0-51
-	// for the fraction part in the number
-	if (msb_loc < 52) {
-		repr <<= (52 - msb_loc);
-	} else {
-		repr >>= (msb_loc - 52);
+		// Now for the magnitude
+		// Number is 1.<something> from MSB onwards.
+		// Which is what we want...
+		// We need to get the MSB to location 52, and then take locations
+		// 0-51 for the fraction part in the number
+		if (msb_loc < 52) {
+			repr <<= (52 - msb_loc);
+		} else {
+			repr >>= (msb_loc - 52);
+		}
+		
+		u.uintval |= (repr & DOUBLE_FRAC_MASK);
 	}
-	
-	u.uintval |= (repr & DOUBLE_FRAC_MASK);
 	return u.dval;
 }
 
+FxP64 add_FxP64(FxP64 a, FxP64 b) {
+	return a + b;
+}
+
+FxP64 sub_FxP64(FxP64 a, FxP64 b) {
+	return a - b;
+}
+
+FxP64 mult_FxP64(FxP64 a, FxP64 b) {
+	return (FxP64) (((((__int128) a) * ((__int128) b)) >> FxP64_FRAC_LEN)
+									& 0xFFFFFFFFFFFFFFFF);
+}
+
+FxP64 div_FxP64(FxP64 a, FxP64 b) {
+	return (FxP64) (((((__int128) a) << FxP64_FRAC_LEN) 
+										/ ((__int128) b))
+									& 0xFFFFFFFFFFFFFFFF);
+}

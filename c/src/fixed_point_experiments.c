@@ -2,9 +2,6 @@
  * fixed_point_experiments.c
  *
  * Some basic fiddling with fixed point number representations.
- *
- * See https://en.wikipedia.org/wiki/Double-precision_floating-point_format
- * for where I have got these definitions.
  */
 
 #include <stdio.h>
@@ -28,7 +25,7 @@ int main(int argc, char *argv[]) {
 	double diffs[32*32];
 	double prods[32*32];
 	double divs[32*32];
-
+	
 	for (size_t i = 0; i < N; ++i) {
 		for (size_t j = 0; j < N; ++j) {
 			sums[i*N+j] = nums[i] + nums[j];
@@ -65,12 +62,14 @@ int main(int argc, char *argv[]) {
 		for (size_t j = 0; j < N; ++j) {
 			FxP64 fxp_j = double_to_FxP64(nums[j]);
 
-			double sum = FxP64_to_double(fxp_i + fxp_j);
-			double diff = FxP64_to_double(fxp_i - fxp_j);
-			double prod = FxP64_to_double(fxp_i * fxp_j);
+			double sum = FxP64_to_double(add_FxP64(fxp_i, fxp_j));
+			double diff = FxP64_to_double(sub_FxP64(fxp_i, fxp_j));
+			double prod = FxP64_to_double(mult_FxP64(fxp_i, fxp_j));
 			double div = 0.0;
+			FxP64 div_actual = 0;
 			if (fxp_j != 0) {
-				div = FxP64_to_double(fxp_i / fxp_j);
+				div = FxP64_to_double(div_FxP64(fxp_i, fxp_j));
+				div_actual = div_FxP64(fxp_i, fxp_j);
 			}
 			
 			if (sum != sums[i*N+j]) {
@@ -102,8 +101,10 @@ int main(int argc, char *argv[]) {
 			} else {
 				printf("OK");
 			}
-			printf("\t%lf / %lf = %lf, expected %lf\n", nums[i], nums[j],
-																									div, divs[i*N+j]);
+			printf("\t%lf / %lf = %lf (%016lx), expected %lf\n",
+																									nums[i], nums[j],
+																									div, div_actual,
+																									divs[i*N+j]);
 		}
 	}
 
