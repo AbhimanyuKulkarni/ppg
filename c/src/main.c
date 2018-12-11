@@ -64,13 +64,13 @@ double corrcoef(double *a, double *b, size_t N) {
 
 /*
  * argv[0]
- * argv[1]: <expt_name> (physionet or sim)
+ * argv[1]: <expt_name> (physionet, physionet_down4, or sim)
  * argv[2]: <mode> (file or gen)
  */
 int main(int argc, char **argv) {
 	if (argc < 3) {
 		fprintf(stderr, "Not enough arguments!\n");
-		fprintf(stderr, "argv[1]: <expt_name> (physionet or sim)\n");
+		fprintf(stderr, "argv[1]: <expt_name> (physionet, physionet_down4, or sim)\n");
 		fprintf(stderr, "argv[2]: <mode> (file or gen)\n");
 	}
 	
@@ -140,6 +140,8 @@ int main(int argc, char **argv) {
 			generate_sim_data(params, X0);
 		} else if (strcmp(argv[1], "physionet") == 0) {
 			get_physionet_data(X0);
+		} else if (strcmp(argv[1], "physionet_down4") == 0) {
+			get_physionet_down4_data(X0);
 		}
 
 		get_random_sample_flags(params.N_window, params.M, phi_flags);

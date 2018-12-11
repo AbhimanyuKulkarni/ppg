@@ -13,4 +13,5 @@ void generate_sim_data(PPG_Params params, double *samples);
 
 // Load PhysioNet data into samples.
 void get_physionet_data(double *samples);
+void get_physionet_down4_data(double *samples);
 #endif
