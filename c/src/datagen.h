@@ -11,6 +11,6 @@ void get_compressed_samples(double *samples, PPG_Params params,
 // Generate simulated cosine wave data from params, into samples.
 void generate_sim_data(PPG_Params params, double *samples);
 
-// Load PhysioNet data into samples, along with params.
-void get_physionet_data(PPG_Params *params, double *samples);
+// Load PhysioNet data into samples.
+void get_physionet_data(double *samples);
 #endif

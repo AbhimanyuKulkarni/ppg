@@ -11,6 +11,7 @@
 
 #include "setup.h"
 #include "ppg_algorithm.h"
+#include "datagen.h"
 
 double max(double a, double b) {
 	return (a > b ? a : b) ;
@@ -64,17 +65,26 @@ double corrcoef(double *a, double *b, size_t N) {
 /*
  * argv[0]
  * argv[1]: <expt_name> (physionet or sim)
+ * argv[2]: <mode> (file or gen)
  */
 int main(int argc, char **argv) {
-	if (argc < 2) {
+	if (argc < 3) {
 		fprintf(stderr, "Not enough arguments!\n");
 		fprintf(stderr, "argv[1]: <expt_name> (physionet or sim)\n");
+		fprintf(stderr, "argv[2]: <mode> (file or gen)\n");
 	}
 	
 	srand(time(NULL));
 
 	// from experiment_setup import *
 	PPG_Params params = get_ppg_params(argv[1]);
+	bool use_datagen = true;
+	if (strcmp(argv[2], "file") == 0) {
+		use_datagen = false;
+	} else if (strcmp(argv[2], "gen") == 0) {
+		use_datagen = true;
+	}
+
 	printf("f0: %ld\nT0: %.3lf\n", params.f0, params.T0);
 	printf("N_window: %ld\nM: %ld\n", params.N_window, params.M);
 	
@@ -86,43 +96,55 @@ int main(int argc, char **argv) {
 	ts = malloc(sizeof(double) * params.N0 / params.CF);
 	Y  = malloc(sizeof(double) * params.N0 / params.CF);
 	Xr = malloc(sizeof(double) * params.N0);
-
-	size_t n = 0;
-	FILE* fp_samples = fopen(params.original_samples_filename, "r");
-	if (!fp_samples) {
-		fprintf(stderr, "Couldn't open file %s!\n",
-						params.original_samples_filename);
-		exit(EXIT_FAILURE);
-	} else {
-		while (fscanf(fp_samples, "%lf,%lf\n", &t0[n], &X0[n]) == 2) {
-			n++;
-			if (n == params.N0) break;
-		}
-		fclose(fp_samples);
-	}
-	printf("Read %ld samples from %s.\n",
-				n, params.original_samples_filename);
-
-	// subsampled_data = np.loadtxt(params.subsamples_filename,
-	//															delimiter=',')
-	n = 0;
-	fp_samples = fopen(params.subsamples_filename, "r");
-	if (!fp_samples) {
-		fprintf(stderr, "Couldn't open file %s!\n",
-						params.subsamples_filename);
-	} else {
-		while (fscanf(fp_samples, "%lf,%lf\n", &ts[n], &Y[n]) == 2) {
-			n++;
-			if (n == params.N0 / params.CF) break;
-		}
-		fclose(fp_samples);
-	}
-	printf("Read %ld samples from %s.\n", n, params.subsamples_filename);
-
-	// phi_flags = np.loadtxt(phi_flags_filename, delimiter=',')
 	bool *phi_flags = malloc(sizeof(bool) * params.N_window);
-	get_random_sample_flags_from_file(params.phi_flags_filename,
-																		params.N_window, phi_flags);
+
+	if (!use_datagen) {
+		size_t n = 0;
+		FILE* fp_samples = fopen(params.original_samples_filename, "r");
+		if (!fp_samples) {
+			fprintf(stderr, "Couldn't open file %s!\n",
+							params.original_samples_filename);
+			exit(EXIT_FAILURE);
+		} else {
+			while (fscanf(fp_samples, "%lf,%lf\n", &t0[n], &X0[n]) == 2) {
+				n++;
+				if (n == params.N0) break;
+			}
+			fclose(fp_samples);
+		}
+		printf("Read %ld samples from %s.\n",
+					n, params.original_samples_filename);
+		// subsampled_data = np.loadtxt(params.subsamples_filename,
+		//															delimiter=',')
+		n = 0;
+		fp_samples = fopen(params.subsamples_filename, "r");
+		if (!fp_samples) {
+			fprintf(stderr, "Couldn't open file %s!\n",
+							params.subsamples_filename);
+		} else {
+			while (fscanf(fp_samples, "%lf,%lf\n", &ts[n], &Y[n]) == 2) {
+				n++;
+				if (n == params.N0 / params.CF) break;
+			}
+			fclose(fp_samples);
+		}
+		printf("Read %ld samples from %s.\n", n,
+					params.subsamples_filename);
+
+		// phi_flags = np.loadtxt(phi_flags_filename, delimiter=',')
+		get_random_sample_flags_from_file(params.phi_flags_filename,
+																			params.N_window, phi_flags);
+
+	} else {
+		if (strcmp(argv[1], "sim") == 0) {
+			generate_sim_data(params, X0);
+		} else if (strcmp(argv[1], "physionet") == 0) {
+			get_physionet_data(X0);
+		}
+
+		get_random_sample_flags(params.N_window, params.M, phi_flags);
+		get_compressed_samples(X0, params, phi_flags, Y);
+	}
 
 	// TODO: period estimation
 	

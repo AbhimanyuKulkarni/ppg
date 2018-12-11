@@ -68,8 +68,7 @@ void generate_sim_data(PPG_Params params, double *samples) {
 	}
 }
 
-void get_physionet_data(PPG_Params *params, double *samples) {
-	*params = get_ppg_params("physionet");
+void get_physionet_data(double *samples) {
 	samples[0] = 1631.497;
 	samples[1] = 1652.750;
 	samples[2] = 1663.731;
