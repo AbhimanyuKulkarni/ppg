@@ -187,14 +187,17 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 				double lambda, double tol, double *x_hat) {
 	// y M-dim, A is MxN, x_hat is Nx1
 	double *A_norm2 = malloc(sizeof(double) * N);
-	memset(A_norm2, 0, sizeof(double) * N);
-	for (int i = 0; i < M; ++i) {
-		for (int j = 0; j < N; ++j) {
+	for (size_t i = 0; i < N; ++i) {
+		A_norm2[i] = 0.0;
+	}
+
+	for (size_t i = 0; i < M; ++i) {
+		for (size_t j = 0; j < N; ++j) {
 			A_norm2[j] += pow(A[i * N + j], 2);
 		}
 	}
 
-	for (int i = 0; i < N; ++i) {
+	for (size_t i = 0; i < N; ++i) {
 		x_hat[i] = 0.5;
 	}
 
@@ -207,7 +210,7 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 	vec_sub_update(r, y_hat, M);
 
 	double max_xi = 0;
-	for (int i = 0; i < N; ++i) {
+	for (size_t i = 0; i < N; ++i) {
 		if (fabs(x_hat[i]) > max_xi) {
 			max_xi = fabs(x_hat[i]);
 		}
@@ -215,7 +218,7 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 
 	while (true) {
 		double max_dxi = 0;
-		for (int i = 0; i < N; ++i) {
+		for (size_t i = 0; i < N; ++i) {
 			if (A_norm2[i] == 0.0) {
 				continue;
 			}
@@ -224,7 +227,7 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 
 			// r += A[:,i] .* x[i]
 			double rho_i = 0;
-			for (int j = 0; j < M; ++j) {
+			for (size_t j = 0; j < M; ++j) {
 				r[j] += A[j * N + i] * x_hat[i];
 				rho_i += r[j] * A[j * N + i];
 			}
@@ -235,7 +238,7 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 			double dxi = fabs(x_hat[i] - x_i0);
 			max_dxi = (dxi > max_dxi ? dxi : max_dxi);
 
-			for (int j = 0; j < M; ++j) {
+			for (size_t j = 0; j < M; ++j) {
 				r[j] -= x_hat[i] * A[j * N + i];
 			}
 
@@ -269,13 +272,23 @@ static void setup_psiT(double *psiT, size_t N) {
 static void half_flip(bool *flags, size_t N, size_t M, bool *flipped) {
 	size_t m = 0;
 	for (size_t i = 0; i < N; ++i) {
+		flipped[i] = false;
+	}
+
+	for (size_t i = 0; i < N; ++i) {
 		if (flags[i]) {
 			if (m++ < M/2) {
 				// should be moved forward
-				flipped[i+N/2] = true;
+				// but only if possible...
+				if (i < N/2) {
+					flipped[i+N/2] = true;
+				}
 			} else {
 				// should be moved backward
-				flipped[i-N/2] = true;
+				// but only if possible...
+				if (i >= N/2) {
+					flipped[i-N/2] = true;
+				}
 			}
 		}
 		if (m == M) break;
@@ -357,7 +370,7 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params,
 																				N_window / 2,
 																				4.0);
 		printf("BPM for (%.2f, %.2f): %.2f\n", tr[t_x + N_window/4],
-																					 tr[t_x + N_window/4],
+																					 tr[t_x + 3*N_window/4],
 																					 bpm_window);
 	}
 

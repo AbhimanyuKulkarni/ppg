@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
 
 	// call ppg algorithm
 	ppg(Y, phi_flags, params, tr, Xr);
-	
+
 	printf("Correlation coefficient: %.4lf\n",
 					corrcoef(X0, Xr, params.N0));
 
