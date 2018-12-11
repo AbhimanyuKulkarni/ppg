@@ -90,11 +90,12 @@ int main(int argc, char **argv) {
 	
 	// original_data = np.loadtxt(original_samples_filename,
 	//														delimiter=',')
-	double *t0, *ts, *X0, *Y, *Xr;
+	double *t0, *ts, *X0, *Y, *tr, *Xr;
 	t0 = malloc(sizeof(double) * params.N0);
 	X0 = malloc(sizeof(double) * params.N0);
 	ts = malloc(sizeof(double) * params.N0 / params.CF);
 	Y  = malloc(sizeof(double) * params.N0 / params.CF);
+	tr = malloc(sizeof(double) * params.N0);
 	Xr = malloc(sizeof(double) * params.N0);
 	bool *phi_flags = malloc(sizeof(bool) * params.N_window);
 
@@ -148,10 +149,8 @@ int main(int argc, char **argv) {
 		get_compressed_samples(X0, params, phi_flags, Y);
 	}
 
-	// TODO: period estimation
-	
 	// call ppg algorithm
-	ppg(Y, phi_flags, params, Xr);
+	ppg(Y, phi_flags, params, tr, Xr);
 	
 	printf("Correlation coefficient: %.4lf\n",
 					corrcoef(X0, Xr, params.N0));
@@ -163,7 +162,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Couldn't open file %s for writing!\n", argv[2]);
 	} else {
 		for (size_t i = 0; i < params.N0; ++i) {
-			fprintf(fp_write, "%f,%f\n", t0[i], Xr[i]);
+			fprintf(fp_write, "%f,%f\n", tr[i], Xr[i]);
 		}
 	}
 	fclose(fp_write);
@@ -172,6 +171,7 @@ int main(int argc, char **argv) {
 	free(ts);
 	free(X0);
 	free(Y);
+	free(tr);
 	free(Xr);
 	free(phi_flags);
 	return 0;

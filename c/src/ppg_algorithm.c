@@ -293,17 +293,8 @@ static void get_selected_rows(double *mat, bool *flags,
 	}
 }
 
-void ppg(double *Y, bool *phi_flags, PPG_Params params, double *Xr) {
-	/*
-	 * t0		:	sample instants (in s) 
-	 * X0		:	original samples (which we are trying to reconstruct)
-	 * N0		:	number of samples we have
-	 * phi_flags:	boolean flags to denote which observations we are selecting,
-	 *				this should have been randomly generated previously
-	 * params	:	simulation/experiment parameters
-	 * Xr		:	where we should store the reconstructed signal (output)
-	 */
-	
+void ppg(double *Y, bool *phi_flags, PPG_Params params,
+				double *tr, double *Xr) {
 	double *y = malloc(sizeof(double) * params.N_window);
 	double *s = malloc(sizeof(double) * params.N_window);
 	double *xr = malloc(sizeof(double) * params.N_window);
@@ -318,7 +309,6 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params, double *Xr) {
 	get_selected_rows(psiT, phi_flags, params.N_window, params.M, A);
 
 	// Flipped A for intermediate windows.
-	// TODO: explain properly why this is needed.
 	bool *phi_flags_flip = malloc(sizeof(bool) * params.N_window);
 	double *A_flip = malloc(sizeof(double) * params.M * params.N_window);
 	half_flip(phi_flags, params.N_window, params.M, phi_flags_flip);
@@ -329,6 +319,12 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params, double *Xr) {
 	size_t M0 = N0 / params.CF;
 	size_t M = params.M;
 	size_t N_window = params.N_window;
+
+	// Setup reconstruction times first, as we know those (uniform
+	// sampling)
+	for (size_t i = 0; i < N0; ++i) {
+		tr[i] = i * params.T0;
+	}
 
 	// First quarter-window
 	memcpy(y, Y, sizeof(double) * M);
@@ -353,6 +349,16 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params, double *Xr) {
 		dot(psiT, s, N_window, N_window, 1, xr);
 		memcpy(Xr + t_x + N_window / 4, xr + N_window / 4,
 					 sizeof(double) * N_window / 2);
+
+		// TODO: add max_f in setup somewhere, instead of hardcoding like
+		// this.
+		double bpm_window = 60.0 * get_freq(Xr + t_x + N_window / 4,
+																				tr + t_x + N_window / 4,
+																				N_window / 2,
+																				4.0);
+		printf("BPM for (%.2f, %.2f): %.2f\n", tr[t_x + N_window/4],
+																					 tr[t_x + N_window/4],
+																					 bpm_window);
 	}
 
 	// Last quarter window
@@ -375,4 +381,48 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params, double *Xr) {
 	free(y);
 	free(xr);
 	free(s);
+}
+
+// see py/main.py for more intuitive code, and comments
+double get_freq(double *X, double *t, size_t N, double max_f) {
+	double t_min = 1.0 / max_f;
+	double mean_X = 0;
+	for (size_t i = 0; i < N; ++i) {
+		mean_X += (1.0 / N) * X[i];
+	}
+	
+	double rms = 0.0;
+	for (size_t i = 0; i < N; ++i) {
+		rms += (1.0 / N) * (X[i] - mean_X) * (X[i] - mean_X);
+	}
+	rms = sqrt(rms);
+	
+	double xprod;
+	double xsum;
+	size_t last_cross_positive = 0;
+	size_t last_cross_negative = 0;
+	size_t nc = 0;
+	for (size_t i = 0; i < N-1; ++i) {
+		// Looking for positive crossing
+		xprod = (X[i] - mean_X - rms) * (X[i+1] - mean_X - rms);
+		if (xprod <= 0) {
+			xsum = fabs(X[i] - mean_X - rms) + fabs(X[i+1] - mean_X - rms);
+			if ((xsum != 0.0) && ((t[i] - t[last_cross_positive]) >= t_min)) {
+				nc++;
+				last_cross_positive = i;
+			}
+			continue; // should probably move on to the next sample now
+		}
+
+		// Negative crossings now.
+		xprod = (X[i] - mean_X + rms) * (X[i+1] - mean_X + rms);
+		if (xprod <= 0) {
+			xsum = fabs(X[i] - mean_X + rms) + fabs(X[i+1] - mean_X + rms);
+			if ((xsum != 0.0) && ((t[i] - t[last_cross_negative]) >= t_min)) {
+				nc++;
+				last_cross_negative = i;
+			}
+		}
+	}
+	return ((double) nc) / (2 * (t[N-1] - t[0]));
 }
