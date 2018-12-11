@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "argv[1]: <expt_name> (physionet or sim)\n");
 	}
 	
-	srand(0);
+	srand(time(NULL));
 
 	// from experiment_setup import *
 	PPG_Params params = get_ppg_params(argv[1]);

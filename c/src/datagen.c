@@ -49,8 +49,6 @@ void get_compressed_samples(double *samples, PPG_Params params,
 }
 
 void generate_sim_data(PPG_Params params, double *samples) {
-	srand(time(NULL));
-
 	size_t smoothing_factor = 0.9;				// make AM low-pass
 	double amp_A = 0.1;										// for AM
 	double sigma0 = 0.15;									// adding random noise
