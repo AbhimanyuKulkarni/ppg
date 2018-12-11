@@ -11,10 +11,12 @@ elif EXPT_NAME == 'sim':
 import numpy as np
 import matplotlib.pyplot as plt
 
-# from sklearn import linear_model
 from lasso import cd_lasso
 from scipy.signal import lombscargle
 
+# Flipping phi around to work for "middle" windows
+# Old phi doesn't seem sensible for those.
+# Paper doesn't talk about it...
 def half_flip(phi):
     M, N = phi.shape
     phi_flipped = np.zeros((M,N))
@@ -22,23 +24,76 @@ def half_flip(phi):
     phi_flipped[M//2:,N//2:] = phi[:M//2,:N//2]
     return phi_flipped
 
-def zcr(X, t):
+# Zero crossing rate
+def zcr(X, t, max_f):
+    t_min = 1.0 / max_f
     X_centred = X - np.mean(X)
     N, = X.shape
     Xl = X_centred[:N-1]
     Xr = X_centred[1:]
     Xprod = Xl * Xr
     Xsum = np.abs(Xl) + np.abs(Xr)
-    nzc = sum(Xprod <= 0)
-    n_bothzero = sum(Xsum == 0)
-    nzc -= n_bothzero
+    crossings = np.logical_and(Xprod <= 0, Xsum != 0)
+    last_cross = 0
+    for i in range(len(crossings)):
+        if crossings[i]:
+            if t[i] - t[last_cross] < t_min:
+                crossings[i] = False
+            else:
+                last_cross = i
+    nzc = sum(crossings)
     return nzc / (2 * (t[-1] - t[0]))
 
+# Smoothing x in a way, like in an AR process sort of.
 def damp(x, p):
     y = np.copy(x)
     for i in range(1, y.size):
         y[i] = p * y[i] + (1 - p) * y[i-1]
     return y
+
+# RMS crossing rate
+def rmscr(X, t, max_f):
+    N, = X.shape
+    t_min = 1.0 / max_f
+    mean_X = np.mean(X)
+    X_centred = X - mean_X
+    rms = np.sqrt(np.dot(X_centred, X_centred) / N)
+    print('Thresholds: {{{}, {}}}'.format(mean_X - rms, mean_X + rms))
+
+    # First find crossings at +rms
+    Xl_positive = X_centred[:N-1] - rms
+    Xr_positive = X_centred[1:] - rms
+    Xprod_positive = Xl_positive * Xr_positive
+    Xsum_positive = np.abs(Xl_positive) + np.abs(Xr_positive)
+    crossings_positive = np.logical_and(Xprod_positive <= 0,
+                                        Xsum_positive != 0)
+    last_cross = 0  # this means that we will ignore the first value
+                    # always, but -1 is even worse in some ways
+                    # any other ideas?
+    for i in range(len(crossings_positive)):
+        if crossings_positive[i]:
+            if t[i] - t[last_cross] < t_min:
+                # remove this crossing, it's too soon
+                crossings_positive[i] = False
+            else:
+                last_cross = i
+    
+    # Now at -rms
+    Xl_negative = X_centred[:N-1] + rms
+    Xr_negative = X_centred[1:] + rms
+    Xprod_negative = Xl_negative * Xr_negative
+    Xsum_negative = np.abs(Xl_negative) + np.abs(Xr_negative)
+    crossings_negative = np.logical_and(Xprod_negative <= 0,
+                                        Xsum_negative != 0)
+    last_cross = 0
+    for i in range(len(crossings_negative)):
+        if crossings_negative[i]:
+            if t[i] - t[last_cross] < t_min:
+                crossings_negative[i] = False
+            else:
+                last_cross = i
+    nc = sum(crossings_positive) + sum(crossings_negative)
+    return nc / (2 * (t[-1] - t[0]))
 
 # Simulation to make sure we can run the compressive sampling algorithm
 # on some data at least.
@@ -95,8 +150,12 @@ for i in range(0, ys.size - M + 1, M//2):
     Xr[k+N_window//4:k+3*N_window//4] = xr[N_window//4:3*N_window//4]
 
     # Estimate period from reconstruction.
-    freq_reconstruct = zcr(np.diff(Xr[k+N_window//4:k+3*N_window//4]),
-                           t0[k+N_window//4+1:k+3*N_window//4]) * 60
+    # freq_reconstruct = zcr(np.diff(Xr[k+N_window//4:k+3*N_window//4]),
+    #                        t0[k+N_window//4:k+3*N_window//4],
+    #                        freqs_Hz[-1]) * 60
+    freq_reconstruct = rmscr(Xr[k+N_window//4:k+3*N_window//4],
+                            t0[k+N_window//4:k+3*N_window//4],
+                            freqs_Hz[-1]) * 60
     # freq_reconstruct = zcr(Xr[k+N_window//4:k+3*N_window//4],
     #                        t0[k+N_window//4:k+3*N_window//4])
     # pgram_window = lombscargle(t0[k+N_window//4:k+3*N_window//4],
