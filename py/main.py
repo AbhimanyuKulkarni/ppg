@@ -67,17 +67,27 @@ def rmscr(X, t, max_f):
     Xsum_positive = np.abs(Xl_positive) + np.abs(Xr_positive)
     crossings_positive = np.logical_and(Xprod_positive <= 0,
                                         Xsum_positive != 0)
-    last_cross = 0  # this means that we will ignore the first value
-                    # always, but -1 is even worse in some ways
-                    # any other ideas?
+    last_cross_up = 0   # this means that we will ignore the first value
+                        # always, but -1 is even worse in some ways
+                        # any other ideas?
+    last_cross_down = 0 # going down
     for i in range(len(crossings_positive)):
         if crossings_positive[i]:
-            if t[i] - t[last_cross] < t_min:
-                # remove this crossing, it's too soon
-                crossings_positive[i] = False
+            # 0th element of diffs ~ 1st element of X
+            if X[i] < X[i+1]:
+                # if going up
+                if t[i] - t[last_cross_up] < t_min:
+                    # remove this crossing, it's too soon
+                    crossings_positive[i] = False
+                else:
+                    last_cross_up = i
             else:
-                last_cross = i
-    
+                # going down
+                if t[i] - t[last_cross_down] < t_min:
+                    crossings_positive[i] = False
+                else:
+                    last_cross_down = i
+
     # Now at -rms
     Xl_negative = X_centred[:N-1] + rms
     Xr_negative = X_centred[1:] + rms
@@ -85,15 +95,24 @@ def rmscr(X, t, max_f):
     Xsum_negative = np.abs(Xl_negative) + np.abs(Xr_negative)
     crossings_negative = np.logical_and(Xprod_negative <= 0,
                                         Xsum_negative != 0)
-    last_cross = 0
+    last_cross_up = 0
+    last_cross_down = 0
     for i in range(len(crossings_negative)):
         if crossings_negative[i]:
-            if t[i] - t[last_cross] < t_min:
-                crossings_negative[i] = False
+            if X[i] < X[i+1]:
+                # going up
+                if t[i] - t[last_cross_up] < t_min:
+                    crossings_negative[i] = False
+                else:
+                    last_cross_up = i
             else:
-                last_cross = i
+                # going down 
+                if t[i] - t[last_cross_down] < t_min:
+                    crossings_negative[i] = False
+                else:
+                    last_cross_down = i
     nc = sum(crossings_positive) + sum(crossings_negative)
-    return nc / (2 * (t[-1] - t[0]))
+    return nc / (4 * (t[-1] - t[0]))
 
 # Simulation to make sure we can run the compressive sampling algorithm
 # on some data at least.

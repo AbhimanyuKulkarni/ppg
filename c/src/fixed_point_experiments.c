@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <math.h>
 #include "fixed_point.h"
 
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+
 
 	for (size_t i = 0; i < N; ++i) {
 		printf("=================================\n");
@@ -108,5 +110,36 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// dot products
+	printf("Dot Products:\n-----------------------\n");
+	for (size_t p = 0; p < 20; ++p) {
+		double *vec_a = malloc(sizeof(double) * (1 << p));
+		double *vec_b = malloc(sizeof(double) * (1 << p));
+
+		double num;
+		for (size_t i = 0; i < (1 << p); ++i) {
+			num = rand() % (1 << (FxP64_INT_LEN - 1));
+			num /= (1 << (FxP64_INT_LEN - 1)); // in [0, 1]
+			num /= sqrt(1 << p);
+			vec_a[i] = num;
+		}
+		for (size_t i = 0; i < (1 << p); ++i) {
+			num = rand() % (1 << (FxP64_INT_LEN - 1));
+			num /= (1 << (FxP64_INT_LEN - 1)); // in [0, 1]
+			num /= sqrt(1 << p);
+			vec_b[i] = num;
+		}
+
+		double dot = 0.0;
+		FxP64 dot_FxP64 = double_to_FxP64(0.0);
+		for (size_t i = 0; i < (1 << p); ++i) {
+			dot += vec_a[i] * vec_b[i];
+			dot_FxP64 = add_FxP64(dot_FxP64, mult_FxP64(double_to_FxP64(vec_a[i]),
+																									double_to_FxP64(vec_b[i])));
+		}
+
+		printf("p = %lu; double dot: %.6lf, FxP64 dot: %.6lf\n",
+					p, dot, FxP64_to_double(dot_FxP64));
+	}
 	return 0;
 }

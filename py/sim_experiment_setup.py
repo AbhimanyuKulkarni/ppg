@@ -29,7 +29,7 @@ phi_flags_filename \
         = 'data/{}/phi_flags_{}_{}.csv'.format(EXPT_NAME,
                                                 N_window, M)
 psiT_mat_filename \
-        = 'data/{}/psiT_{}_{}.csv'.format(EXPT_NAME, N_window, M)
+        = 'data/{}/psiT_{}.csv'.format(EXPT_NAME, N_window)
 A_mat_filename \
         = 'data/{}/A_{}_{}.csv'.format(EXPT_NAME, N_window, M)
 A_flip_mat_filename \

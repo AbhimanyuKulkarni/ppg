@@ -33,34 +33,6 @@ void get_random_sample_flags_from_file(char *filepath, size_t N, bool *flags) {
 	fclose(fp);
 }
 
-double corrcoef(double *a, double *b, size_t N) {
-	double mean_a, mean_b;
-	mean_a = mean_b = 0.0;
-	for (size_t i = 0; i < N; ++i) {
-		mean_a += (1.0 / N) * a[i];
-		mean_b += (1.0 / N) * b[i];
-	}
-
-	double norm_a = 0.0, norm_b = 0.0;
-	for (size_t i = 0; i < N; ++i) {
-		norm_a += pow(a[i] - mean_a, 2);
-		norm_b += pow(b[i] - mean_b, 2);
-	}
-	norm_a = sqrt(norm_a);
-	norm_b = sqrt(norm_b);
-
-	// Don't let (1/std) blow up; better to just let it die.
-	if (norm_a < 1.0e-4) norm_a = 1.0e10;
-	if (norm_b < 1.0e-4) norm_b = 1.0e10;
-
-	double corr = 0.0;
-	for (size_t i = 0; i < N; ++i) {
-		corr += ((a[i] - mean_a) * (b[i] - mean_b));
-	}
-	corr /= (norm_a * norm_b);
-	return corr;
-}
-
 
 /*
  * argv[0]
@@ -72,6 +44,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Not enough arguments!\n");
 		fprintf(stderr, "argv[1]: <expt_name> (physionet, physionet_down4, or sim)\n");
 		fprintf(stderr, "argv[2]: <mode> (file or gen)\n");
+		exit(1);
 	}
 	
 	srand(time(NULL));

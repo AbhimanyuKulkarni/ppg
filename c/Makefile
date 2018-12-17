@@ -1,5 +1,7 @@
-SRC		:= src
-BIN		:= bin
+INCLUDE	:= include
+SRC			:= src
+BIN			:= bin
+CFLAGS	:= -c -g -Wall -I$(INCLUDE)
 OBJS	:= $(BIN)/main.o \
 					$(BIN)/ppg_algorithm.o \
 					$(BIN)/datagen.o \
@@ -18,7 +20,7 @@ $(BIN)/fixed_point_expt: $(BIN)/fixed_point.o \
 	gcc $^ -o $@ -lm
 
 $(BIN)/%.o: $(SRC)/%.c
-	gcc -c -O3 -Wall $^ -o $@
+	gcc $(CFLAGS) $^ -o $@
 
 .PHONY: clean
 

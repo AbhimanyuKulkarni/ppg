@@ -34,7 +34,7 @@ union double_bitview {
 FxP64 double_to_FxP64(double d);
 double FxP64_to_double(FxP64 fxp);
 
-// Should these be macros instead?
+// Will be used by fxp64_ops.h
 FxP64 add_FxP64(FxP64 a, FxP64 b);
 FxP64 sub_FxP64(FxP64 a, FxP64 b);
 FxP64 mult_FxP64(FxP64 a, FxP64 b);

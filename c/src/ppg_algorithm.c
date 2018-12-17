@@ -30,7 +30,7 @@ static void dot(double *A, double *B, size_t M, size_t N, size_t P,
 }
 
 // LASSO solvers
-static void cd_lasso(double *y, double *A, size_t M, size_t N,
+void cd_lasso(double *y, double *A, size_t M, size_t N,
 				double lambda, double tol, double *x_hat) {
 	// y M-dim, A is MxN, x_hat is Nx1
 	double *A_norm2 = malloc(sizeof(double) * N);
@@ -102,21 +102,21 @@ static void cd_lasso(double *y, double *A, size_t M, size_t N,
 }
 
 // PPG algorithm helper functions
-static void setup_psiT(double *psiT, size_t N) {
+void setup_psiT(double *psiT, size_t N) {
 	double factor = 1.0 / sqrt(N);
 	for (size_t n = 0; n < N; ++n) {
 		psiT[n * N] = factor;
 	}
 
 	factor *= sqrt(2);
-	for (size_t n = 1; n < N; ++n) {
-		for (size_t k = 0; k < N; ++k) {
+	for (size_t n = 0; n < N; ++n) {
+		for (size_t k = 1; k < N; ++k) {
 			psiT[n * N + k] = factor * cos((M_PI / N) * (n + 0.5) * k);
 		}
 	}
 }
 
-static void half_flip(bool *flags, size_t N, size_t M, bool *flipped) {
+void half_flip(bool *flags, size_t N, size_t M, bool *flipped) {
 	size_t m = 0;
 	for (size_t i = 0; i < N; ++i) {
 		flipped[i] = false;
@@ -142,7 +142,7 @@ static void half_flip(bool *flags, size_t N, size_t M, bool *flipped) {
 	}
 }
 
-static void get_selected_rows(double *mat, bool *flags, 
+void get_selected_rows(double *mat, bool *flags, 
 															size_t N, size_t m, double *out) {
 	size_t row = 0;
 	for (int i = 0; i < N; ++i) {
@@ -286,3 +286,32 @@ double get_freq(double *X, double *t, size_t N, double max_f) {
 	}
 	return ((double) nc) / (2 * (t[N-1] - t[0]));
 }
+
+double corrcoef(double *a, double *b, size_t N) {
+	double mean_a, mean_b;
+	mean_a = mean_b = 0.0;
+	for (size_t i = 0; i < N; ++i) {
+		mean_a += (1.0 / N) * a[i];
+		mean_b += (1.0 / N) * b[i];
+	}
+
+	double norm_a = 0.0, norm_b = 0.0;
+	for (size_t i = 0; i < N; ++i) {
+		norm_a += pow(a[i] - mean_a, 2);
+		norm_b += pow(b[i] - mean_b, 2);
+	}
+	norm_a = sqrt(norm_a);
+	norm_b = sqrt(norm_b);
+
+	// Don't let (1/std) blow up; better to just let it die.
+	if (norm_a < 1.0e-4) norm_a = 1.0e10;
+	if (norm_b < 1.0e-4) norm_b = 1.0e10;
+
+	double corr = 0.0;
+	for (size_t i = 0; i < N; ++i) {
+		corr += ((a[i] - mean_a) * (b[i] - mean_b));
+	}
+	corr /= (norm_a * norm_b);
+	return corr;
+}
+
