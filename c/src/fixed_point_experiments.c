@@ -221,15 +221,19 @@ void cd_lasso_double(double *y, double *A, double *x,
 void cd_lasso_FxP64(FxP64 *y, FxP64 *A, FxP64 *x, size_t N, size_t D,
 										FxP64 lambda, FxP64 tol) {
 	FxP64 *A_norm2 = malloc(sizeof(FxP64) * D);
+	const FxP64 ZERO = int64_to_FxP64((int64_t) 0);
+	const FxP64 ONE = int64_to_FxP64((int64_t) 1);
+	const FxP64 MINUS_ONE = int64_to_FxP64((int64_t) -1);
+
 	for (size_t j = 0; j < D; ++j) {
-		A_norm2[j] = double_to_FxP64(0.0);
+		A_norm2[j] = ZERO;
 		for (size_t i = 0; i < N; ++i) {
 			A_norm2[j] = add_FxP64(A_norm2[j], mult_FxP64(A[i * D + j],
 																										A[i * D + j]));
 		}
 	}
 
-	FxP64 max_xj = double_to_FxP64(0.0);
+	FxP64 max_xj = ZERO;
 	for (size_t j = 0; j < D; ++j) {
 		max_xj = max_FxP64(abs_FxP64(x[j]), max_xj);
 	}
@@ -242,24 +246,22 @@ void cd_lasso_FxP64(FxP64 *y, FxP64 *A, FxP64 *x, size_t N, size_t D,
 		}
 	}
 
-	FxP64 max_dxj = double_to_FxP64(0.0);
+	FxP64 max_dxj = ZERO;
 	do {
-		max_dxj = double_to_FxP64(0.0);
+		max_dxj = ZERO;
 		for (size_t j = 0; j < D; ++j) {
-			if (A_norm2[j] == double_to_FxP64(0.0)) continue;
+			if (A_norm2[j] == ZERO) continue;
 			FxP64 x_j0 = x[j];
-			FxP64 rho_j = double_to_FxP64(0.0);
+			FxP64 rho_j = ZERO;
 			for (size_t i = 0; i < N; ++i) {
 				r[i] = add_FxP64(r[i], mult_FxP64(A[i * D + j], x[j]));
 				rho_j = add_FxP64(rho_j, mult_FxP64(r[i], A[i * D + j]));
 			}
-			FxP64 sign = greater_than_FxP64(rho_j, 0.0) 
-									? double_to_FxP64(1.0)
-									: double_to_FxP64(-1.0);
+			FxP64 sign = greater_than_FxP64(rho_j, ZERO) ? ONE : MINUS_ONE;
 			x[j] = div_FxP64(mult_FxP64(sign,
 																	max_FxP64(sub_FxP64(abs_FxP64(rho_j),
 																											lambda),
-																						double_to_FxP64(0.0))),
+																						ZERO)),
 											A_norm2[j]);
 			for (size_t i = 0; i < N; ++i) {
 				r[i] = sub_FxP64(r[i], mult_FxP64(A[i * D + j], x[j]));

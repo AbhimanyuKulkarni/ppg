@@ -31,6 +31,7 @@ union double_bitview {
 	uint64_t uintval;
 };
 
+FxP64 int64_to_FxP64(int64_t d);
 FxP64 double_to_FxP64(double d);
 double FxP64_to_double(FxP64 fxp);
 

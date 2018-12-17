@@ -1,6 +1,11 @@
 #include "fixed_point.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <math.h>
+
+FxP64 int64_to_FxP64(int64_t d) {
+	return d << FxP64_FRAC_LEN;
+}
 
 FxP64 double_to_FxP64(double d) {
 	union double_bitview u;
