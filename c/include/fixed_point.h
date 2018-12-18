@@ -9,6 +9,7 @@
 #define PPG_FxP_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef int64_t FxP64;
 typedef int32_t FxP32;
@@ -40,4 +41,10 @@ FxP64 add_FxP64(FxP64 a, FxP64 b);
 FxP64 sub_FxP64(FxP64 a, FxP64 b);
 FxP64 mult_FxP64(FxP64 a, FxP64 b);
 FxP64 div_FxP64(FxP64 a, FxP64 b);
+FxP64 max_FxP64(FxP64 a, FxP64 b);
+FxP64 abs_FxP64(FxP64 x);
+bool less_than_FxP64(FxP64 a, FxP64 b);
+bool less_or_eq_FxP64(FxP64 a, FxP64 b);
+bool greater_than_FxP64(FxP64 a, FxP64 b);
+bool greater_or_eq_FxP64(FxP64 a, FxP64 b);
 #endif

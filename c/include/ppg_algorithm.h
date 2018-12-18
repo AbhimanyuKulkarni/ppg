@@ -6,22 +6,22 @@
 #include <stdbool.h>
 
 // Main algorithm which should be used to reconstruct an entire signal.
-void ppg(double *Y, bool *phi_flags, PPG_Params params,
-				double *tr, double *Xr);
+void ppg(PPG_FRAC *Y, bool *phi_flags, PPG_Params params,
+				PPG_FRAC *tr, PPG_FRAC *Xr);
 
 // Parts of the overall PPG reconstruction algorithm, exposed for
 // testing.
 
 // LASSO solver based on coordinate descent.
-void cd_lasso(double *y, double *A, size_t M, size_t N,
-							double lambda, double tol, double *x_hat);
+void cd_lasso(PPG_FRAC *y, PPG_FRAC *A, size_t M, size_t N,
+							PPG_FRAC lambda, PPG_FRAC tol, PPG_FRAC *x_hat);
 
 // Get DCT matrix
-void setup_psiT(double *psiT, size_t N);
+void setup_psiT(PPG_FRAC *psiT, size_t N);
 
 // Form sampled DCT matrix (A matrix)
-void get_selected_rows(double *mat, bool *flags,
-											size_t N, size_t m, double *out);
+void get_selected_rows(PPG_FRAC *mat, bool *flags,
+											size_t N, size_t m, PPG_FRAC *out);
 
 // Half-flip to handle overlapping windows which don't come from the
 // same model
@@ -32,9 +32,9 @@ void half_flip(bool *flags, size_t N, size_t M, bool *flipped);
 // Result will be in Hz, multiply by 60 to get bpm
 // This is for consistency with the max_f passed in, which should also
 // be in Hz.
-double get_freq(double *X, double *t,
+double get_freq(PPG_FRAC *X, PPG_FRAC *t,
 								size_t N, double max_f);
 
 // Get Pearson correlation with ground-truth signal
-double corrcoef(double *a, double *b, size_t N);
+double corrcoef(PPG_FRAC *a, PPG_FRAC *b, size_t N);
 #endif

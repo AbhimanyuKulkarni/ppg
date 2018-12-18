@@ -13,11 +13,6 @@
 #include "ppg_algorithm.h"
 #include "datagen.h"
 
-double max(double a, double b) {
-	return (a > b ? a : b) ;
-}
-
-
 void get_random_sample_flags_from_file(char *filepath, size_t N, bool *flags) {
 	FILE *fp = fopen(filepath, "r");
 	if (fp) {
@@ -32,7 +27,6 @@ void get_random_sample_flags_from_file(char *filepath, size_t N, bool *flags) {
 	}
 	fclose(fp);
 }
-
 
 /*
  * argv[0]
@@ -58,18 +52,18 @@ int main(int argc, char **argv) {
 		use_datagen = true;
 	}
 
-	printf("f0: %ld\nT0: %.3lf\n", params.f0, params.T0);
+	printf("f0: %ld\nT0: %.3lf\n", params.f0, FRAC_TO_FLOAT64(params.T0));
 	printf("N_window: %ld\nM: %ld\n", params.N_window, params.M);
 	
 	// original_data = np.loadtxt(original_samples_filename,
 	//														delimiter=',')
-	double *t0, *ts, *X0, *Y, *tr, *Xr;
-	t0 = malloc(sizeof(double) * params.N0);
-	X0 = malloc(sizeof(double) * params.N0);
-	ts = malloc(sizeof(double) * params.N0 / params.CF);
-	Y  = malloc(sizeof(double) * params.N0 / params.CF);
-	tr = malloc(sizeof(double) * params.N0);
-	Xr = malloc(sizeof(double) * params.N0);
+	PPG_FRAC *t0, *ts, *X0, *Y, *tr, *Xr;
+	t0 = malloc(sizeof(PPG_FRAC) * params.N0);
+	X0 = malloc(sizeof(PPG_FRAC) * params.N0);
+	ts = malloc(sizeof(PPG_FRAC) * params.N0 / params.CF);
+	Y  = malloc(sizeof(PPG_FRAC) * params.N0 / params.CF);
+	tr = malloc(sizeof(PPG_FRAC) * params.N0);
+	Xr = malloc(sizeof(PPG_FRAC) * params.N0);
 	bool *phi_flags = malloc(sizeof(bool) * params.N_window);
 
 	if (!use_datagen) {
@@ -80,7 +74,10 @@ int main(int argc, char **argv) {
 							params.original_samples_filename);
 			exit(EXIT_FAILURE);
 		} else {
-			while (fscanf(fp_samples, "%lf,%lf\n", &t0[n], &X0[n]) == 2) {
+			double t, x;
+			while (fscanf(fp_samples, "%lf,%lf\n", &t, &x) == 2) {
+				t0[n] = FLOAT64_TO_FRAC(t);
+				X0[n] = FLOAT64_TO_FRAC(x);
 				n++;
 				if (n == params.N0) break;
 			}
@@ -96,7 +93,10 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "Couldn't open file %s!\n",
 							params.subsamples_filename);
 		} else {
-			while (fscanf(fp_samples, "%lf,%lf\n", &ts[n], &Y[n]) == 2) {
+			double t, y;
+			while (fscanf(fp_samples, "%lf,%lf\n", &t, &y) == 2) {
+				ts[n] = FLOAT64_TO_FRAC(t);
+				Y[n] = FLOAT64_TO_FRAC(y);
 				n++;
 				if (n == params.N0 / params.CF) break;
 			}
@@ -135,7 +135,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Couldn't open file %s for writing!\n", argv[2]);
 	} else {
 		for (size_t i = 0; i < params.N0; ++i) {
-			fprintf(fp_write, "%f,%f\n", tr[i], Xr[i]);
+			fprintf(fp_write, "%f,%f\n",
+							FRAC_TO_FLOAT64(tr[i]), FRAC_TO_FLOAT64(Xr[i]));
 		}
 	}
 	fclose(fp_write);

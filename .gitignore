@@ -7,6 +7,9 @@ __pycache__/
 *.so
 *.o
 
+# ctags files
+*tags
+
 # Can always reconstruct locally if code works
 data/sim/reconstructed_*
 data/physionet/reconstructed_*

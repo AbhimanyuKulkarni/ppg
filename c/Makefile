@@ -1,7 +1,9 @@
 INCLUDE	:= include
 SRC			:= src
 BIN			:= bin
-CFLAGS	:= -c -g -Wall -I$(INCLUDE)
+
+CFLAGS	:= -c -g -Wall -I$(INCLUDE) -DPPG_USE_FLOAT64
+
 OBJS	:= $(BIN)/main.o \
 					$(BIN)/ppg_algorithm.o \
 					$(BIN)/datagen.o \
@@ -12,7 +14,8 @@ OBJS	:= $(BIN)/main.o \
 all: $(BIN)/c_reconstruction $(BIN)/fixed_point_expt
 
 $(BIN)/c_reconstruction: $(BIN)/main.o $(BIN)/ppg_algorithm.o \
-													$(BIN)/datagen.o $(BIN)/setup.o
+													$(BIN)/datagen.o $(BIN)/setup.o \
+													$(BIN)/fixed_point.o
 	gcc $^ -o $@ -lm
 
 $(BIN)/fixed_point_expt: $(BIN)/fixed_point.o \

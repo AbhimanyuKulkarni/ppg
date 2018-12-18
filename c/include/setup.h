@@ -1,21 +1,19 @@
 #ifndef PPG_SETUP_H
 #define PPG_SETUP_H
 
-/*
 #ifdef PPG_USE_FLOAT64
-	#define PPG_FRAC_TYPE double
+	#define PPG_FRAC double
 	#include "float64_ops.h"
 #elif defined PPG_USE_FLOAT32
-	#define PPG_FRAC_TYPE float
+	#define PPG_FRAC float
 	#include "float32_ops.h"
 #elif defined PPG_USE_FXP64
-	#define PPG_FRAC_TYPE FxP64
+	#define PPG_FRAC FxP64
 	#include "fxp64_ops.h"
 #elif defined PPG_USE_FXP32
-	#define PPG_FRAC_TYPE FxP32
+	#define PPG_FRAC FxP32
 	#include "fxp32_ops.h"
 #endif
-*/
 
 #include <stddef.h>
 
@@ -26,7 +24,7 @@ typedef struct PPG_Params {
 	size_t N0;					// #samples in whole signal
 
 	size_t f0;					// sample rate of original signal, in Hz
-	double T0;					// 1 / f0, so in seconds
+	PPG_FRAC T0;				// 1 / f0, so in seconds
 
 	size_t T_window;		// Window length for reconstruction algorithm,
 											// in seconds
@@ -35,8 +33,8 @@ typedef struct PPG_Params {
 	unsigned int CF;		// compression factor
 	size_t M;						// compressed window length = N_window / CF
 
-	double LASSO_lambda;							// LASSO regularization parameter
-	double CD_diff_thresh;						// stopping threshold for coordinate
+	PPG_FRAC LASSO_lambda;						// LASSO regularization parameter
+	PPG_FRAC CD_diff_thresh;					// stopping threshold for coordinate
 																		// descent algorithm
 	
 	char *original_samples_filename;	// where the uncompressed signal is

@@ -67,12 +67,12 @@ PPG_Params get_ppg_params(const char *expt_name) {
 						= "data/sim/A_flip_240_20.csv";
 	}
 
-	params.T0 = 1.0 / params.f0;
+	params.T0 = FLOAT64_TO_FRAC(1.0 / params.f0);
 	params.N_window = nearest_multiple(params.T_window * params.f0, 4);
 	params.M = params.N_window / params.CF;
 	params.N0 = nearest_multiple(params.T * params.f0,
 															 params.N_window / 2);
-	params.LASSO_lambda = 1.0e-2;
-	params.CD_diff_thresh = 1.0e-2;
+	params.LASSO_lambda = FLOAT64_TO_FRAC(1.0e-2);
+	params.CD_diff_thresh = FLOAT64_TO_FRAC(1.0e-2);
 	return params;
 }

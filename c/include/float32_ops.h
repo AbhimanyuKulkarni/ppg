@@ -5,9 +5,9 @@
 
 // convert (double) x to/from right type
 // double is already the right type if we're using double
-#define FLOAT64_TO_NUM(x) ((float) x)
-#define UINT_TO_NUM(x) ((float) x)
-#define NUM_TO_FLOAT64(x) ((double) x)
+#define FLOAT64_TO_FRAC(x) ((float) x)
+#define INT64_TO_FRAC(x) ((float) x)
+#define FRAC_TO_FLOAT64(x) ((double) x)
 
 // arithmetic and logical
 #define ADD(a, b) (a + b)
@@ -20,8 +20,8 @@
 #define LESS_OR_EQ(a, b) (a <= b)
 #define EQUAL(a, b) (a == b)
 
+#define MAX(a, b) (a > b ? a : b)
+
 // more math
 #define FABS(x) fabs(x)
-#define SQRT(x) sqrt(x)
-#define COS(x) cos(x)
 #endif

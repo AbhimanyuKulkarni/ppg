@@ -16,24 +16,6 @@ static double max_double(double a, double b) {
 	return a > b ? a : b;
 }
 
-static FxP64 max_FxP64(FxP64 a, FxP64 b) {
-	// signed ints should work the same
-	return a > b ? a : b;
-}
-
-static FxP64 abs_FxP64(FxP64 x) {
-	// signed ints should work the same?
-	return x < 0 ? -x : x;
-}
-
-static bool less_than_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) < 0;
-}
-
-static bool greater_than_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) > 0;
-}
-
 void test_FxP64_conversion(double *nums, size_t N) {
 	printf("=========================================================\n");
 	printf("Testing conversion:\n");
@@ -213,7 +195,7 @@ void cd_lasso_double(double *y, double *A, double *x,
 			max_dxj = max_double(fabs(x[j] - x_j0), max_dxj);
 			max_xj = max_double(fabs(x[j]), max_xj);
 		}
-	} while ((max_dxj / max_xj) < tol);
+	} while ((max_dxj / max_xj) > tol);
 	free(r);
 	free(A_norm2);
 }
@@ -269,7 +251,7 @@ void cd_lasso_FxP64(FxP64 *y, FxP64 *A, FxP64 *x, size_t N, size_t D,
 			max_dxj = max_FxP64(abs_FxP64(sub_FxP64(x[j], x_j0)), max_dxj);
 			max_xj = max_FxP64(abs_FxP64(x[j]), max_xj);
 		}
-	} while (less_than_FxP64(div_FxP64(max_dxj, max_xj), tol));
+	} while (greater_than_FxP64(div_FxP64(max_dxj, max_xj), tol));
 
 	free(r);
 	free(A_norm2);

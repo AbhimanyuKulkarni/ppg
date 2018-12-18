@@ -3,115 +3,106 @@
 #include <string.h>
 #include <stdio.h>
 
-// General helper functions
-static double max(double a, double b) {
-	return (a > b ? a : b) ;
-}
-
-static void vec_sub_update(double *vec, double *b, size_t N) {
-	for (size_t i = 0; i < N; ++i) {
-		vec[i] -= b[i];
-	}
-}
-
 ////////////////////////////////////////////////////////////////////////
 // Matrix math
-static void dot(double *A, double *B, size_t M, size_t N, size_t P,
-								double *C) {
+static void dot(PPG_FRAC *A, PPG_FRAC *B, size_t M, size_t N, size_t P,
+								PPG_FRAC *C) {
 	// C = AB, everything is row-major
-	for (int i = 0; i < M; ++i) {
-		for (int j = 0; j < P; ++j) {
-			C[i * P + j] = 0;
-			for (int k = 0; k < N; ++k) {
-				C[i * P + j] += A[i * N + k] * B[k * P + j];
+	for (size_t i = 0; i < M; ++i) {
+		for (size_t j = 0; j < P; ++j) {
+			// C[i * P + j] = 0;
+			C[i * P + j] = INT64_TO_FRAC(0);
+			for (size_t k = 0; k < N; ++k) {
+				// C[i * P + j] += A[i * N + k] * B[k * P + j];
+				C[i * P + j] = ADD(C[i * P + j],
+													 MULT(A[i * N + k], B[k * P + j]));
 			}
 		}
 	}
 }
 
 // LASSO solvers
-void cd_lasso(double *y, double *A, size_t M, size_t N,
-				double lambda, double tol, double *x_hat) {
-	// y M-dim, A is MxN, x_hat is Nx1
-	double *A_norm2 = malloc(sizeof(double) * N);
-	for (size_t i = 0; i < N; ++i) {
-		A_norm2[i] = 0.0;
+void cd_lasso(PPG_FRAC *y, PPG_FRAC *A, size_t M, size_t N,
+							PPG_FRAC lambda, PPG_FRAC tol, PPG_FRAC *x_hat) {
+	PPG_FRAC *A_norm2 = malloc(sizeof(PPG_FRAC) * N);
+	PPG_FRAC *r = malloc(sizeof(PPG_FRAC) * N); // residual
+	const PPG_FRAC ZERO = INT64_TO_FRAC(0);
+	const PPG_FRAC ONE = INT64_TO_FRAC(1);
+	const PPG_FRAC MINUS_ONE = INT64_TO_FRAC(-1);
+
+	PPG_FRAC max_xj = ZERO;
+	PPG_FRAC max_dxj = ZERO;
+
+	// Calculate A_norm2
+	for (size_t j = 0; j < N; ++j) {
+		A_norm2[j] = ZERO;
+		for (size_t i = 0; i < M; ++i) {
+			A_norm2[j] = ADD(A_norm2[j], MULT(A[i * N + j], A[i * N + j]));
+		}
 	}
 
+	// Init x_hat
+	for (size_t j = 0; j < N; ++j) {
+		x_hat[j] = FLOAT64_TO_FRAC(0.5);
+	}
+
+	// Init max_xj: could have just set to 0.5, but if we change to random
+	// init or something, then this can be useful.
+	for (size_t j = 0; j < N; ++j) {
+		max_xj = MAX(FABS(x_hat[j]), max_xj);
+	}
+
+	// Set up residual
 	for (size_t i = 0; i < M; ++i) {
+		r[i] = y[i];
 		for (size_t j = 0; j < N; ++j) {
-			A_norm2[j] += pow(A[i * N + j], 2);
+			r[i] = SUB(r[i], MULT(A[i * N + j], x_hat[j]));
 		}
 	}
 
-	for (size_t i = 0; i < N; ++i) {
-		x_hat[i] = 0.5;
-	}
-
-	double *y_hat = malloc(sizeof(double) * M);
-	// y_hat = A * x_hat
-	dot(A, x_hat, M, N, 1, y_hat);
-
-	double *r = malloc(sizeof(double) * M);
-	memcpy(r, y, sizeof(double) * M);
-	vec_sub_update(r, y_hat, M);
-
-	double max_xi = 0;
-	for (size_t i = 0; i < N; ++i) {
-		if (fabs(x_hat[i]) > max_xi) {
-			max_xi = fabs(x_hat[i]);
-		}
-	}
-
-	while (true) {
-		double max_dxi = 0;
-		for (size_t i = 0; i < N; ++i) {
-			if (A_norm2[i] == 0.0) {
-				continue;
+	do {
+		max_dxj = ZERO;
+		for (size_t j = 0; j < N; ++j) {
+			// A_norm2[j] needs to be non-zero
+			if (A_norm2[j] == ZERO) continue;
+			// keep old value
+			PPG_FRAC x_j0 = x_hat[j];
+			// Set up x[j] update
+			PPG_FRAC rho_j = ZERO;
+			for (size_t i = 0; i < M; ++i) {
+				// remove x[j] contribution from residual
+				r[i] = ADD(r[i], MULT(A[i * N + j], x_hat[j]));
+				rho_j = ADD(rho_j, MULT(r[i], A[i * N + j]));
 			}
-
-			double x_i0 = x_hat[i];
-
-			// r += A[:,i] .* x[i]
-			double rho_i = 0;
-			for (size_t j = 0; j < M; ++j) {
-				r[j] += A[j * N + i] * x_hat[i];
-				rho_i += r[j] * A[j * N + i];
+			PPG_FRAC sign = GREATER_THAN(rho_j, ZERO) ? ONE : MINUS_ONE;
+			x_hat[j] = DIV(MULT(sign, MAX(SUB(FABS(rho_j), lambda),
+																		ZERO)),
+										 A_norm2[j]);
+			for (size_t i = 0; i < M; ++i) {
+				// add back x[j] contribution to residual, using new value
+				r[i] = SUB(r[i], MULT(A[i * N + j], x_hat[j]));
 			}
-
-			double sign = (rho_i > 0 ? 1.0 : -1.0);
-			x_hat[i] = (sign * max(fabs(rho_i) - lambda, 0)) / A_norm2[i];
-
-			double dxi = fabs(x_hat[i] - x_i0);
-			max_dxi = (dxi > max_dxi ? dxi : max_dxi);
-
-			for (size_t j = 0; j < M; ++j) {
-				r[j] -= x_hat[i] * A[j * N + i];
-			}
-
-			max_xi = max(max_xi, fabs(x_hat[i]));
+			max_dxj = MAX(FABS(SUB(x_hat[j], x_j0)), max_dxj);
+			max_xj = MAX(FABS(x_hat[j]), max_xj);
 		}
-		if ((max_dxi / max_xi) < tol) {
-			break;
-		}
-	}
+	} while (GREATER_THAN(DIV(max_dxj, max_xj), tol));
 
 	free(r);
-	free(y_hat);
 	free(A_norm2);
 }
 
 // PPG algorithm helper functions
-void setup_psiT(double *psiT, size_t N) {
-	double factor = 1.0 / sqrt(N);
+void setup_psiT(PPG_FRAC *psiT, size_t N) {
+	PPG_FRAC factor = FLOAT64_TO_FRAC(1.0 / sqrt(N));
 	for (size_t n = 0; n < N; ++n) {
 		psiT[n * N] = factor;
 	}
 
-	factor *= sqrt(2);
+	factor = MULT(factor, FLOAT64_TO_FRAC(sqrt(2)));
 	for (size_t n = 0; n < N; ++n) {
 		for (size_t k = 1; k < N; ++k) {
-			psiT[n * N + k] = factor * cos((M_PI / N) * (n + 0.5) * k);
+			psiT[n * N + k] = MULT(factor,
+														 FLOAT64_TO_FRAC(cos((M_PI / N) * (n + 0.5) * k)));
 		}
 	}
 }
@@ -142,35 +133,35 @@ void half_flip(bool *flags, size_t N, size_t M, bool *flipped) {
 	}
 }
 
-void get_selected_rows(double *mat, bool *flags, 
-															size_t N, size_t m, double *out) {
+void get_selected_rows(PPG_FRAC *mat, bool *flags, 
+											size_t N, size_t m, PPG_FRAC *out) {
 	size_t row = 0;
-	for (int i = 0; i < N; ++i) {
+	for (size_t i = 0; i < N; ++i) {
 		if (flags[i]) {
-			memcpy(out + row * N, mat + i * N, N * sizeof(double));
+			memcpy(out + row * N, mat + i * N, N * sizeof(PPG_FRAC));
 			if (row++ == m) break;
 		}
 	}
 }
 
-void ppg(double *Y, bool *phi_flags, PPG_Params params,
-				double *tr, double *Xr) {
-	double *y = malloc(sizeof(double) * params.N_window);
-	double *s = malloc(sizeof(double) * params.N_window);
-	double *xr = malloc(sizeof(double) * params.N_window);
+void ppg(PPG_FRAC *Y, bool *phi_flags, PPG_Params params,
+				PPG_FRAC *tr, PPG_FRAC *Xr) {
+	PPG_FRAC *y = malloc(sizeof(PPG_FRAC) * params.N_window);
+	PPG_FRAC *s = malloc(sizeof(PPG_FRAC) * params.N_window);
+	PPG_FRAC *xr = malloc(sizeof(PPG_FRAC) * params.N_window);
 
 	// IDCT matrix
-	double *psiT 
-			= malloc(sizeof(double) * params.N_window * params.N_window);
+	PPG_FRAC *psiT 
+			= malloc(sizeof(PPG_FRAC) * params.N_window * params.N_window);
 	setup_psiT(psiT, params.N_window);
 
 	// A = phi * psi.T
-	double *A = malloc(sizeof(double) * params.M * params.N_window);
+	PPG_FRAC *A = malloc(sizeof(PPG_FRAC) * params.M * params.N_window);
 	get_selected_rows(psiT, phi_flags, params.N_window, params.M, A);
 
 	// Flipped A for intermediate windows.
 	bool *phi_flags_flip = malloc(sizeof(bool) * params.N_window);
-	double *A_flip = malloc(sizeof(double) * params.M * params.N_window);
+	PPG_FRAC *A_flip = malloc(sizeof(PPG_FRAC) * params.M * params.N_window);
 	half_flip(phi_flags, params.N_window, params.M, phi_flags_flip);
 	get_selected_rows(psiT, phi_flags_flip, params.N_window, params.M,
 										A_flip);
@@ -183,21 +174,21 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params,
 	// Setup reconstruction times first, as we know those (uniform
 	// sampling)
 	for (size_t i = 0; i < N0; ++i) {
-		tr[i] = i * params.T0;
+		tr[i] = MULT(INT64_TO_FRAC(i), params.T0);
 	}
 
 	// First quarter-window
-	memcpy(y, Y, sizeof(double) * M);
+	memcpy(y, Y, sizeof(PPG_FRAC) * M);
 	cd_lasso(y, A, M, N_window, params.LASSO_lambda,
 					params.CD_diff_thresh, s);
 	dot(psiT, s, N_window, N_window, 1, xr);
-	memcpy(Xr, xr, sizeof(double) * N_window / 4);
+	memcpy(Xr, xr, sizeof(PPG_FRAC) * N_window / 4);
 	
 	// All the windows
 	for (size_t t_x = 0, t_y = 0;
 			 t_y < M0 - M + 1;
 			 t_x += N_window / 2, t_y += M / 2) {
-		memcpy(y, Y + t_y, sizeof(double) * M);
+		memcpy(y, Y + t_y, sizeof(PPG_FRAC) * M);
 		if (t_y % M == 0) {
 			cd_lasso(y, A, M, N_window,
 								params.LASSO_lambda, params.CD_diff_thresh,
@@ -208,7 +199,7 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params,
 		}
 		dot(psiT, s, N_window, N_window, 1, xr);
 		memcpy(Xr + t_x + N_window / 4, xr + N_window / 4,
-					 sizeof(double) * N_window / 2);
+					 sizeof(PPG_FRAC) * N_window / 2);
 
 		// TODO: add max_f in setup somewhere, instead of hardcoding like
 		// this.
@@ -216,8 +207,8 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params,
 																				tr + t_x + N_window / 4,
 																				N_window / 2,
 																				4.0);
-		printf("BPM for (%.2f, %.2f): %.2f\n", tr[t_x + N_window/4],
-																					 tr[t_x + 3*N_window/4],
+		printf("BPM for (%.2f, %.2f): %.2f\n", FRAC_TO_FLOAT64(tr[t_x + N_window/4]),
+																					 FRAC_TO_FLOAT64(tr[t_x + 3*N_window/4]),
 																					 bpm_window);
 	}
 
@@ -244,16 +235,17 @@ void ppg(double *Y, bool *phi_flags, PPG_Params params,
 }
 
 // see py/main.py for more intuitive code, and comments
-double get_freq(double *X, double *t, size_t N, double max_f) {
+double get_freq(PPG_FRAC *X, PPG_FRAC *t, size_t N, double max_f) {
 	double t_min = 1.0 / max_f;
 	double mean_X = 0;
 	for (size_t i = 0; i < N; ++i) {
-		mean_X += (1.0 / N) * X[i];
+		mean_X += (1.0 / N) * FRAC_TO_FLOAT64(X[i]);
 	}
 	
 	double rms = 0.0;
 	for (size_t i = 0; i < N; ++i) {
-		rms += (1.0 / N) * (X[i] - mean_X) * (X[i] - mean_X);
+		rms += (1.0 / N) * (FRAC_TO_FLOAT64(X[i]) - mean_X) 
+										 * (FRAC_TO_FLOAT64(X[i]) - mean_X);
 	}
 	rms = sqrt(rms);
 	
@@ -264,10 +256,15 @@ double get_freq(double *X, double *t, size_t N, double max_f) {
 	size_t nc = 0;
 	for (size_t i = 0; i < N-1; ++i) {
 		// Looking for positive crossing
-		xprod = (X[i] - mean_X - rms) * (X[i+1] - mean_X - rms);
+		xprod = (FRAC_TO_FLOAT64(X[i]) - mean_X - rms) 
+					* (FRAC_TO_FLOAT64(X[i+1]) - mean_X - rms);
 		if (xprod <= 0) {
-			xsum = fabs(X[i] - mean_X - rms) + fabs(X[i+1] - mean_X - rms);
-			if ((xsum != 0.0) && ((t[i] - t[last_cross_positive]) >= t_min)) {
+			xsum = fabs(FRAC_TO_FLOAT64(X[i]) - mean_X - rms) 
+						+ fabs(FRAC_TO_FLOAT64(X[i+1]) - mean_X - rms);
+			if ((xsum != 0.0) 
+					&& ((FRAC_TO_FLOAT64(t[i]) 
+								- FRAC_TO_FLOAT64(t[last_cross_positive])) 
+							>= t_min)) {
 				nc++;
 				last_cross_positive = i;
 			}
@@ -275,30 +272,36 @@ double get_freq(double *X, double *t, size_t N, double max_f) {
 		}
 
 		// Negative crossings now.
-		xprod = (X[i] - mean_X + rms) * (X[i+1] - mean_X + rms);
+		xprod = (FRAC_TO_FLOAT64(X[i]) - mean_X + rms) 
+					* (FRAC_TO_FLOAT64(X[i+1]) - mean_X + rms);
 		if (xprod <= 0) {
-			xsum = fabs(X[i] - mean_X + rms) + fabs(X[i+1] - mean_X + rms);
-			if ((xsum != 0.0) && ((t[i] - t[last_cross_negative]) >= t_min)) {
+			xsum = fabs(FRAC_TO_FLOAT64(X[i]) - mean_X + rms) 
+						+ fabs(FRAC_TO_FLOAT64(X[i+1]) - mean_X + rms);
+			if ((xsum != 0.0) 
+					&& ((FRAC_TO_FLOAT64(t[i])
+								- FRAC_TO_FLOAT64(t[last_cross_negative]))
+							>= t_min)) {
 				nc++;
 				last_cross_negative = i;
 			}
 		}
 	}
-	return ((double) nc) / (2 * (t[N-1] - t[0]));
+	return ((double) nc) 
+					/ (2 * (FRAC_TO_FLOAT64(t[N-1]) - FRAC_TO_FLOAT64(t[0])));
 }
 
-double corrcoef(double *a, double *b, size_t N) {
+double corrcoef(PPG_FRAC *a, PPG_FRAC *b, size_t N) {
 	double mean_a, mean_b;
 	mean_a = mean_b = 0.0;
 	for (size_t i = 0; i < N; ++i) {
-		mean_a += (1.0 / N) * a[i];
-		mean_b += (1.0 / N) * b[i];
+		mean_a += (1.0 / N) * FRAC_TO_FLOAT64(a[i]);
+		mean_b += (1.0 / N) * FRAC_TO_FLOAT64(b[i]);
 	}
 
 	double norm_a = 0.0, norm_b = 0.0;
 	for (size_t i = 0; i < N; ++i) {
-		norm_a += pow(a[i] - mean_a, 2);
-		norm_b += pow(b[i] - mean_b, 2);
+		norm_a += pow(FRAC_TO_FLOAT64(a[i]) - mean_a, 2);
+		norm_b += pow(FRAC_TO_FLOAT64(b[i]) - mean_b, 2);
 	}
 	norm_a = sqrt(norm_a);
 	norm_b = sqrt(norm_b);
@@ -309,7 +312,8 @@ double corrcoef(double *a, double *b, size_t N) {
 
 	double corr = 0.0;
 	for (size_t i = 0; i < N; ++i) {
-		corr += ((a[i] - mean_a) * (b[i] - mean_b));
+		corr += ((FRAC_TO_FLOAT64(a[i]) - mean_a) 
+						* (FRAC_TO_FLOAT64(b[i]) - mean_b));
 	}
 	corr /= (norm_a * norm_b);
 	return corr;

@@ -128,3 +128,30 @@ FxP64 div_FxP64(FxP64 a, FxP64 b) {
 										/ ((__int128) b))
 									& 0xFFFFFFFFFFFFFFFF);
 }
+
+// signed ints should work the same?
+
+FxP64 max_FxP64(FxP64 a, FxP64 b) {
+	return a > b ? a : b;
+}
+
+FxP64 abs_FxP64(FxP64 x) {
+	return x < 0 ? -x : x;
+}
+
+bool less_than_FxP64(FxP64 a, FxP64 b) {
+	return sub_FxP64(a, b) < 0;
+}
+
+bool less_or_eq_FxP64(FxP64 a, FxP64 b) {
+	return sub_FxP64(a, b) <= 0;
+}
+
+bool greater_than_FxP64(FxP64 a, FxP64 b) {
+	return sub_FxP64(a, b) > 0;
+}
+
+bool greater_or_eq_FxP64(FxP64 a, FxP64 b) {
+	return sub_FxP64(a, b) >= 0;
+}
+
