@@ -2,23 +2,24 @@ INCLUDE	:= include
 SRC			:= src
 BIN			:= bin
 
-CFLAGS	:= -c -g -Wall -I$(INCLUDE) -DPPG_USE_FLOAT64
+FRAC_TYPE ?= -DPPG_USE_FLOAT64
+CFLAGS	:= -c -g -Wall -I$(INCLUDE) $(FRAC_TYPE)
 
 OBJS	:= $(BIN)/main.o \
 					$(BIN)/ppg_algorithm.o \
 					$(BIN)/datagen.o \
 					$(BIN)/setup.o \
-					$(BIN)/fixed_point.o \
+					$(BIN)/fxp_ops.o \
 					$(BIN)/fixed_point_experiments.o
 
 all: $(BIN)/c_reconstruction $(BIN)/fixed_point_expt
 
 $(BIN)/c_reconstruction: $(BIN)/main.o $(BIN)/ppg_algorithm.o \
 													$(BIN)/datagen.o $(BIN)/setup.o \
-													$(BIN)/fixed_point.o
+													$(BIN)/fxp_ops.o
 	gcc $^ -o $@ -lm
 
-$(BIN)/fixed_point_expt: $(BIN)/fixed_point.o \
+$(BIN)/fixed_point_expt: $(BIN)/fxp_ops.o \
 													$(BIN)/fixed_point_experiments.o
 	gcc $^ -o $@ -lm
 

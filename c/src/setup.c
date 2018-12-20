@@ -13,6 +13,7 @@ PPG_Params get_ppg_params(const char *expt_name) {
 		params.f0 = 256;
 		params.T_window = 60;
 		params.CF = 32;
+		params.LASSO_lambda = FLOAT64_TO_FRAC(1.0e-5);
 		
 		params.original_samples_filename = "data/physionet/samples.csv";
 		params.phi_flags_filename
@@ -32,6 +33,7 @@ PPG_Params get_ppg_params(const char *expt_name) {
 		params.f0 = 64;
 		params.T_window = 60;
 		params.CF = 32;
+		params.LASSO_lambda = FLOAT64_TO_FRAC(1.0e-5);
 		
 		params.original_samples_filename = "data/physionet/samples_down4.csv";
 		params.phi_flags_filename
@@ -51,6 +53,7 @@ PPG_Params get_ppg_params(const char *expt_name) {
 		params.f0 = 4;
 		params.T_window = 60;
 		params.CF = 12;
+		params.LASSO_lambda = FLOAT64_TO_FRAC(1.0e-2);
 		
 		params.original_samples_filename = "data/sim/samples.csv";
 		params.phi_flags_filename
@@ -72,7 +75,6 @@ PPG_Params get_ppg_params(const char *expt_name) {
 	params.M = params.N_window / params.CF;
 	params.N0 = nearest_multiple(params.T * params.f0,
 															 params.N_window / 2);
-	params.LASSO_lambda = FLOAT64_TO_FRAC(1.0e-2);
 	params.CD_diff_thresh = FLOAT64_TO_FRAC(1.0e-2);
 	return params;
 }

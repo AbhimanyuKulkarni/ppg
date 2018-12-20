@@ -4,6 +4,27 @@
 #include <stdio.h>
 
 ////////////////////////////////////////////////////////////////////////
+// Preprocessing
+void standardize(PPG_FRAC *data, size_t N, size_t val_range) {
+	PPG_FRAC min, max, data_range;
+	min = data[0];
+	max = data[0];
+	const PPG_FRAC ONE = INT64_TO_FRAC(1);
+	const PPG_FRAC TWO = INT64_TO_FRAC(2);
+	for (size_t i = 0; i < N; ++i) {
+		min = MIN(min, data[i]);
+		max = MAX(max, data[i]);
+	}
+
+	// scale to [-1 / M, 1 / M], where M = max(1, N / val_range)
+	data_range = SUB(max, min);
+	PPG_FRAC final_range = MAX(ONE, INT64_TO_FRAC(N/val_range));
+	for (size_t i = 0; i < N; ++i) {
+		data[i] = SUB(MULT(TWO, DIV(SUB(data[i], min), data_range)), ONE);
+		data[i] = DIV(data[i], final_range);
+	}
+}
+
 // Matrix math
 static void dot(PPG_FRAC *A, PPG_FRAC *B, size_t M, size_t N, size_t P,
 								PPG_FRAC *C) {
@@ -43,7 +64,7 @@ void cd_lasso(PPG_FRAC *y, PPG_FRAC *A, size_t M, size_t N,
 
 	// Init x_hat
 	for (size_t j = 0; j < N; ++j) {
-		x_hat[j] = FLOAT64_TO_FRAC(0.5);
+		x_hat[j] = ZERO;
 	}
 
 	// Init max_xj: could have just set to 0.5, but if we change to random
@@ -176,6 +197,12 @@ void ppg(PPG_FRAC *Y, bool *phi_flags, PPG_Params params,
 	for (size_t i = 0; i < N0; ++i) {
 		tr[i] = MULT(INT64_TO_FRAC(i), params.T0);
 	}
+
+	// Standardize scale
+#if defined(PPG_USE_FXP64) || defined(PPG_USE_FXP32) \
+		|| defined(PPG_USE_FXP16) || defined(PPG_USE_FXP8)
+	standardize(Y, M0, 1 << FxP_INT_LEN);
+#endif
 
 	// First quarter-window
 	memcpy(y, Y, sizeof(PPG_FRAC) * M);

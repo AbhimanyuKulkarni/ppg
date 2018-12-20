@@ -1,13 +1,13 @@
-#include "fixed_point.h"
+#include "fxp_ops.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
 
-FxP64 int64_to_FxP64(int64_t d) {
-	return d << FxP64_FRAC_LEN;
+FxP int64_to_FxP(int64_t d) {
+	return (FxP) ((d << FxP_FRAC_LEN) & (FxP_INT_MASK | FxP_FRAC_MASK));
 }
 
-FxP64 double_to_FxP64(double d) {
+FxP double_to_FxP(double d) {
 	union double_bitview u;
 	u.dval = d;
 	uint64_t double_frac_part = u.uintval & DOUBLE_FRAC_MASK;
@@ -18,7 +18,7 @@ FxP64 double_to_FxP64(double d) {
 	if (double_exp_part == 0) {
 		// Subnormals.
 		// Such values should just become zero though...
-		return (FxP64) 0;
+		return (FxP) 0;
 	} else {
 		// Number is -1^sign * 2^(e-1023) * 1.<fraction>
 		fraction = double_frac_part | DOUBLE_ONE_FLAG;
@@ -33,16 +33,17 @@ FxP64 double_to_FxP64(double d) {
 		// This is not a big deal with 64 bits, but should make a
 		// substantial difference when we extend this to shorter
 		// representations (32-, 16-, and especially 8-bit).
-		int frac_shift = (52 - FxP64_FRAC_LEN);
+		int frac_shift = (52 - FxP_FRAC_LEN);
 		int exp = double_exp_part - 1023;
 		int total_shift = frac_shift - exp; // +ve exp -> left shift
 
-		if (exp >= FxP64_INT_LEN) {
+		if (exp >= FxP_INT_LEN) {
 			// Can't do much here, overflow is guaranteed.
 			fprintf(stderr, "Overflow on %lf!\n", d);
 		} else if (total_shift > 52) {
 			// Underflow. Can't do much...
 			fprintf(stderr, "Underflow on %.15lf!\n", d);
+			return (FxP) 0;
 		}
 
 		if (total_shift > 0) {
@@ -51,23 +52,25 @@ FxP64 double_to_FxP64(double d) {
 			fraction <<= -total_shift;
 		}
 		if (double_sign_part == 0) {
-			return fraction;
+			return (FxP) fraction;
 		} else {
 			// perform 2s complement
 			// The computer does this for us...
-			return -fraction;
+			return (FxP) (-fraction);
 		}
 	}
 }
 
-double FxP64_to_double(FxP64 fxp) {
+double FxP_to_double(FxP fxp) {
 	union double_bitview u;
 	u.uintval = 0;
 
-	uint64_t sign_part = fxp & FxP64_SIGN_MASK;
+	int64_t repr = fxp;		// force 64-bit width
+
+	const uint64_t FxP64_SIGN_MASK = ((uint64_t) 1) << 63;
+	uint64_t sign_part = repr & FxP64_SIGN_MASK;
 	u.uintval |= sign_part;
-	
-	uint64_t repr = fxp;
+
 	if (sign_part) {
 		// re-do 2s complement to get magnitude.
 		// But the computer can do this for us automatically...
@@ -90,7 +93,7 @@ double FxP64_to_double(FxP64 fxp) {
 		//								msb 48 => number is already 1.<fraction>
 		//								so if msb 62
 		//									we should have max term 2^14
-		uint64_t exp = 1023 - FxP64_FRAC_LEN + msb_loc;
+		uint64_t exp = 1023 - FxP_FRAC_LEN + msb_loc;
 		exp <<= 52;
 		u.uintval |= exp;
 
@@ -110,48 +113,80 @@ double FxP64_to_double(FxP64 fxp) {
 	return u.dval;
 }
 
-FxP64 add_FxP64(FxP64 a, FxP64 b) {
+FxP add_FxP(FxP a, FxP b) {
 	return a + b;
 }
 
-FxP64 sub_FxP64(FxP64 a, FxP64 b) {
+FxP sub_FxP(FxP a, FxP b) {
 	return a - b;
 }
 
-FxP64 mult_FxP64(FxP64 a, FxP64 b) {
-	return (FxP64) (((((__int128) a) * ((__int128) b)) >> FxP64_FRAC_LEN)
-									& 0xFFFFFFFFFFFFFFFF);
+FxP mult_FxP(FxP a, FxP b) {
+	#ifdef PPG_USE_FXP64
+		return (FxP) (((((__int128) a) * ((__int128) b)) >> FxP_FRAC_LEN)
+										& 0xFFFFFFFFFFFFFFFF);
+	#elif defined(PPG_USE_FXP32)
+		return (FxP) (((((int64_t) a) * ((int64_t) b)) >> FxP_FRAC_LEN)
+										& 0xFFFFFFFF);
+	#elif defined(PPG_USE_FXP16)
+		return (FxP) (((((int32_t) a) * ((int32_t) b)) >> FxP_FRAC_LEN)
+										& 0xFFFF);
+	#elif defined(PPG_USE_FXP8)
+		return (FxP) (((((int16_t) a) * ((int16_t) b)) >> FxP_FRAC_LEN)
+										& 0xFF);
+	#else
+		return (FxP) 0;	// not implemented
+	#endif
 }
 
-FxP64 div_FxP64(FxP64 a, FxP64 b) {
-	return (FxP64) (((((__int128) a) << FxP64_FRAC_LEN) 
-										/ ((__int128) b))
-									& 0xFFFFFFFFFFFFFFFF);
+FxP div_FxP(FxP a, FxP b) {
+	#if defined(PPG_USE_FXP64)
+		return (FxP) (((((__int128) a) << FxP_FRAC_LEN)
+											/ ((__int128) b))
+										& 0xFFFFFFFFFFFFFFFF);
+	#elif defined(PPG_USE_FXP32)
+		return (FxP) (((((int64_t) a) << FxP_FRAC_LEN)
+											/ ((int64_t) b))
+										& 0xFFFFFFFF);
+	#elif defined(PPG_USE_FXP16)
+		return (FxP) (((((int32_t) a) << FxP_FRAC_LEN)
+											/ ((int32_t) b))
+										& 0xFFFF);
+	#elif defined(PPG_USE_FXP8)
+		return (FxP) (((((int16_t) a) << FxP_FRAC_LEN)
+											/ ((int16_t) b))
+										& 0xFF);
+	#else
+		return (FxP) 0; // not implemented
+	#endif
 }
 
 // signed ints should work the same?
+FxP min_FxP(FxP a, FxP b) {
+	return a < b ? a : b;
+}
 
-FxP64 max_FxP64(FxP64 a, FxP64 b) {
+FxP max_FxP(FxP a, FxP b) {
 	return a > b ? a : b;
 }
 
-FxP64 abs_FxP64(FxP64 x) {
+FxP abs_FxP(FxP x) {
 	return x < 0 ? -x : x;
 }
 
-bool less_than_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) < 0;
+bool less_than_FxP(FxP a, FxP b) {
+	return sub_FxP(a, b) < 0;
 }
 
-bool less_or_eq_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) <= 0;
+bool less_or_eq_FxP(FxP a, FxP b) {
+	return sub_FxP(a, b) <= 0;
 }
 
-bool greater_than_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) > 0;
+bool greater_than_FxP(FxP a, FxP b) {
+	return sub_FxP(a, b) > 0;
 }
 
-bool greater_or_eq_FxP64(FxP64 a, FxP64 b) {
-	return sub_FxP64(a, b) >= 0;
+bool greater_or_eq_FxP(FxP a, FxP b) {
+	return sub_FxP(a, b) >= 0;
 }
 

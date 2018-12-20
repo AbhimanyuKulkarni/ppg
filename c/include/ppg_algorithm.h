@@ -12,6 +12,11 @@ void ppg(PPG_FRAC *Y, bool *phi_flags, PPG_Params params,
 // Parts of the overall PPG reconstruction algorithm, exposed for
 // testing.
 
+// Standardization x <- (x - min) / (max - min), with further constraint
+// on range from val_range. Final range [-1/M, 1/M] where 
+// M = max(1, N/val_range)
+void standardize(PPG_FRAC *data, size_t N, size_t val_range);
+
 // LASSO solver based on coordinate descent.
 void cd_lasso(PPG_FRAC *y, PPG_FRAC *A, size_t M, size_t N,
 							PPG_FRAC lambda, PPG_FRAC tol, PPG_FRAC *x_hat);

@@ -1,18 +1,20 @@
 #ifndef PPG_SETUP_H
 #define PPG_SETUP_H
 
-#ifdef PPG_USE_FLOAT64
-	#define PPG_FRAC double
-	#include "float64_ops.h"
-#elif defined PPG_USE_FLOAT32
+#if defined(PPG_USE_FXP64) || defined(PPG_USE_FXP32) \
+		|| defined(PPG_USE_FXP16) || defined(PPG_USE_FXP8)
+	// use fixed-point
+	#define PPG_FRAC FxP
+	#include "fxp_ops.h"
+#elif defined(PPG_USE_FLOAT32)
 	#define PPG_FRAC float
-	#include "float32_ops.h"
-#elif defined PPG_USE_FXP64
-	#define PPG_FRAC FxP64
-	#include "fxp64_ops.h"
-#elif defined PPG_USE_FXP32
-	#define PPG_FRAC FxP32
-	#include "fxp32_ops.h"
+	#include "float_ops.h"
+#elif defined(PPG_USE_FLOAT64)
+	#define PPG_FRAC double
+	#include "float_ops.h"
+#else	// default
+	#define PPG_FRAC double
+	#include "float_ops.h"
 #endif
 
 #include <stddef.h>
